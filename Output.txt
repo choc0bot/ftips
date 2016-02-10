@@ -1,0 +1,1 @@
+["fremantle dockers", "west coast eagles", "hawthorn hawks", "sydney swans", "richmond tigers", "western bulldogs", "adelaide crows", "kangaroos", "port adelaide power", "geelong cats", "greater western sydney giants", "collingwood magpies", "melbourne demons", "st kilda saints", "essendon bombers", "gold coast suns", "brisbane lions", "carlton blues"]
