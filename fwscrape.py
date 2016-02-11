@@ -38,6 +38,11 @@ class Footywire_Scraper:
         mylink = mylink.replace('-', ' ')
         return mylink
 
+    def doit(self, text):      
+        matches=re.findall(r'\"(.+?)\"',text)
+        # matches is now ['String 1', 'String 2', 'String3']
+        return ",".join(matches)
+
     def list_to_file(self, thelist, filename):
         thefile = filename + ".txt"
         text_file = open(thefile, "w")
@@ -115,6 +120,7 @@ class Footywire_Scraper:
         #for link in team_header:
         for count in range(0, 414):
             link = team_header[count]
+            print link
             mylink = link.get('href')
             team_list.append(scraper.clean_team(mylink))
 
@@ -134,42 +140,78 @@ class Footywire_Scraper:
 
         scraper.list_to_file(final_match_list, 'scores')
 
-
-
-        """
-        for link in soup.find_all('a'):
-            mylink = link.get('href')
-            if mylink.find('/') == -1:
-                if mylink.find('ft') == -1:
-                    #mylink = mylink.translate(None, 'th-')
-                    #mylink = mylink.translate(None, '-')
-                    mylink = mylink[3:]
-                    mylink = mylink.replace('-', ' ')
-                    result.append((mylink))
+    def get_results_ext(self):
+        """Parses footywire HTML to get ladder"""
 
 
 
-        print json.dumps(result)
+        result_url = "ft_match_list?year=2015"
+        session = requests.session()
+        response = session.get(self.baseURL + result_url, headers=self.headers)
+        soup = BeautifulSoup(response.text,'html.parser')
 
-        print "================="
-        
-        if result:
-            f = Firebase('https://flickering-fire-9394.firebaseio.com/result')
-            response = f.remove()
-            print response
-            for team in result:
-                print team
-                r = f.push({'team_id': team })
-                print r
 
-            text_file = open("Output.txt", "w")
-            text_file.write(json.dumps(result))
-            text_file.close()
-            #print result_header
-            #print team_header
-        """
+        result = []
+        #result_header = soup.find_all(text=re.compile('Round'))
+        #print result_header
+
+        #team_header = soup.find_all(tr=re.compile('#f2f4f7'))
+        allrows = soup.findAll('tr')
+        userrows = [t for t in allrows if t.findAll(text=re.compile('v '))]
+
+
+        rowlist = []
+        count = 0
+        for row in userrows:
+            rowtxt = row.findAll(href=re.compile('th-'))
+            rowlist.append(rowtxt)
+
+        for row in userrows:
+            rowtxt = row.findAll(href=re.compile('ft_match_statistics'))
+            #print rowtxt
+            if rowtxt == []:
+                pass
+                #count += 1
+                #print "Round" + str(count)
+            else:
+                scraper.score_string(str(rowtxt), '>', '<')
+            #rowlist.append(rowtxt)
+
+        idx = 0
+        count = 0
+        for row in rowlist:
+            if count > 23:
+                return
+            if row == []:
+                count += 1
+                #print "Round" + str(count)
+            else:
+                thteam = scraper.doit(str(row[0]))
+                thteam_two = scraper.doit(str(row[1]))
+                #print scraper.clean_team(thteam) + " vs " + scraper.clean_team(thteam_two)
+            idx += 1
+
+        #scraper.list_to_file(team_list, 'teams')
+
+        scores = soup.find_all(href=re.compile('ft_match_statistics'))
+
+        final_match_list = []
+        count = 0
+        for score in scores:
+            match_score = score.string
+            count += 1
+            match_list = match_score.split('-')
+            final_match_list.append(match_list[0])
+            final_match_list.append(match_list[1])
+
+        #scraper.list_to_file(final_match_list, 'scores')
+
+    def score_string(self, s_string, split_one, split_two):
+        score_one = s_string.split('>')
+        print score_one[1]
+
 
 
 scraper = Footywire_Scraper()
 #ladder = scraper.get_ladder()
-results = scraper.get_results()
+results = scraper.get_results_ext()
