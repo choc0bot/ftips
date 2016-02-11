@@ -33,6 +33,17 @@ class Footywire_Scraper:
         self.headers = {"User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.116 Safari/537.36","Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", "Referer":"http://www.google.com.au","Cache-Control":"max-age=0"}
         self.baseURL = "http://www.footywire.com/afl/footy/"
 
+    def clean_team(self, mylink):
+        mylink = mylink[3:]
+        mylink = mylink.replace('-', ' ')
+        return mylink
+
+    def list_to_file(self, thelist, filename):
+        thefile = filename + ".txt"
+        text_file = open(thefile, "w")
+        for item in thelist:
+           text_file.write("%s\n" % item)
+
     def get_ladder(self):
         """Parses footywire HTML to get ladder"""
 
@@ -90,20 +101,40 @@ class Footywire_Scraper:
         result_url = "ft_match_list?year=2015"
         session = requests.session()
         response = session.get(self.baseURL + result_url, headers=self.headers)
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.text,'html.parser')
+
 
         result = []
         #result_header = soup.find_all(text=re.compile('Round'))
         #print result_header
         team_header = soup.find_all(href=re.compile('th-'))
-        print team_header
+        #print team_header
 
-        for link in team_header:
+        team_list = []
+        count = 0
+        #for link in team_header:
+        for count in range(0, 414):
+            link = team_header[count]
             mylink = link.get('href')
-            print mylink
+            team_list.append(scraper.clean_team(mylink))
 
-        #team_link = team_header.find_all('a')
-        #print team_link
+
+        scraper.list_to_file(team_list, 'teams')
+
+        scores = soup.find_all(href=re.compile('ft_match_statistics'))
+
+        final_match_list = []
+        count = 0
+        for score in scores:
+            match_score = score.string
+            count +=1
+            match_list = match_score.split('-')
+            final_match_list.append(match_list[0])
+            final_match_list.append(match_list[1])
+
+        scraper.list_to_file(final_match_list, 'scores')
+
+
 
         """
         for link in soup.find_all('a'):
