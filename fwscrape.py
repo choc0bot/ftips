@@ -38,13 +38,14 @@ class Footywire_Scraper:
         mylink = mylink.replace('-', ' ')
         return mylink
 
-    def doit(self, text):      
+    def doit(self, text):
         matches=re.findall(r'\"(.+?)\"',text)
         # matches is now ['String 1', 'String 2', 'String3']
         return ",".join(matches)
 
     def list_to_file(self, thelist, filename):
         thefile = filename + ".txt"
+        print thefile
         text_file = open(thefile, "w")
         for item in thelist:
            text_file.write("%s\n" % item)
@@ -179,37 +180,40 @@ class Footywire_Scraper:
 
         idx = 0
         count = 0
+        team_list = []
         for row in rowlist:
-            if count > 23:
-                return
-            if row == []:
-                count += 1
-                #print "Round" + str(count)
-            else:
-                thteam = scraper.doit(str(row[0]))
-                thteam_two = scraper.doit(str(row[1]))
-                #print scraper.clean_team(thteam) + " vs " + scraper.clean_team(thteam_two)
-            idx += 1
+            if count < 27:
+                if row == []:
+                    count += 1
+                    if count > 3:
+                        print "Round" + str(count-3)
+                else:
+                    thteam = scraper.doit(str(row[0]))
+                    thteam_two = scraper.doit(str(row[1]))
+                    match = scraper.clean_team(thteam) + " vs " + scraper.clean_team(thteam_two)
+                    print match
+                    team_list.append(match)
 
-        #scraper.list_to_file(team_list, 'teams')
+
+
+
+        scraper.list_to_file(team_list, 'teams')
 
         scores = soup.find_all(href=re.compile('ft_match_statistics'))
 
         final_match_list = []
-        count = 0
+
         for score in scores:
             match_score = score.string
-            count += 1
-            match_list = match_score.split('-')
-            final_match_list.append(match_list[0])
-            final_match_list.append(match_list[1])
+            #print match_score
+            final_match_list.append(match_score)
 
-        #scraper.list_to_file(final_match_list, 'scores')
+        scraper.list_to_file(final_match_list, 'scores')
 
     def score_string(self, s_string, split_one, split_two):
         score_one = s_string.split('>')
-        print score_one[1]
-
+        score_two = score_one[1].split('<')
+        return score_two[0]
 
 
 scraper = Footywire_Scraper()
