@@ -1,4 +1,4 @@
-import urllib2
+#import urllib2
 import re
 from bs4 import BeautifulSoup
 import requests
@@ -6,7 +6,7 @@ import requests
 #from dateutil import parser
 import sys
 import time
-import json
+#import json
 from firebase import Firebase
 
 
@@ -39,8 +39,7 @@ class Footywire_Scraper:
         return mylink
 
     def doit(self, text):
-        matches=re.findall(r'\"(.+?)\"',text)
-        # matches is now ['String 1', 'String 2', 'String3']
+        matches = re.findall(r'\"(.+?)\"', text)
         return ",".join(matches)
 
     def list_to_file(self, thelist, filename):
@@ -48,7 +47,7 @@ class Footywire_Scraper:
         print thefile
         text_file = open(thefile, "w")
         for item in thelist:
-           text_file.write("%s\n" % item)
+            text_file.write("%s\n" % item)
 
     def get_ladder(self):
         """Parses footywire HTML to get ladder"""
@@ -60,29 +59,14 @@ class Footywire_Scraper:
         soup = BeautifulSoup(response.text)
 
         ladder = []
-        ladder_header = soup.find_all(text=re.compile('AFL Season  Ladder'))
-
-        team_header = soup.find_all(href=re.compile('th-'))
-
-        #team_link = soup.find_all('a')
-
-        #linkre=re.compile('th-')
 
         for link in soup.find_all('a'):
             mylink = link.get('href')
             if mylink.find('/') == -1:
                 if mylink.find('ft') == -1:
-                    #mylink = mylink.translate(None, 'th-')
-                    #mylink = mylink.translate(None, '-')
                     mylink = mylink[3:]
                     mylink = mylink.replace('-', ' ')
                     ladder.append((mylink))
-
-
-
-        print json.dumps(ladder)
-
-        print "================="
 
         if ladder:
             f = Firebase('https://flickering-fire-9394.firebaseio.com/ladder')
@@ -91,72 +75,26 @@ class Footywire_Scraper:
             for team in ladder:
                 print team
                 r = f.push({'team_id': team })
-                print r
-
-            text_file = open("Output.txt", "w")
-            text_file.write(json.dumps(ladder))
-            text_file.close()
-            #print ladder_header
-            #print team_header
-
-    def get_results(self):
-        """Parses footywire HTML to get ladder"""
-
-
-
-        result_url = "ft_match_list?year=2015"
-        session = requests.session()
-        response = session.get(self.baseURL + result_url, headers=self.headers)
-        soup = BeautifulSoup(response.text,'html.parser')
-
-
-        result = []
-        #result_header = soup.find_all(text=re.compile('Round'))
-        #print result_header
-        team_header = soup.find_all(href=re.compile('th-'))
-        #print team_header
-
-        team_list = []
-        count = 0
-        #for link in team_header:
-        for count in range(0, 414):
-            link = team_header[count]
-            print link
-            mylink = link.get('href')
-            team_list.append(scraper.clean_team(mylink))
-
-
-        scraper.list_to_file(team_list, 'teams')
-
-        scores = soup.find_all(href=re.compile('ft_match_statistics'))
-
-        final_match_list = []
-        count = 0
-        for score in scores:
-            match_score = score.string
-            count +=1
-            match_list = match_score.split('-')
-            final_match_list.append(match_list[0])
-            final_match_list.append(match_list[1])
-
-        scraper.list_to_file(final_match_list, 'scores')
 
     def get_results_ext(self):
         """Parses footywire HTML to get ladder"""
 
-
-
         result_url = "ft_match_list?year=2015"
         session = requests.session()
         response = session.get(self.baseURL + result_url, headers=self.headers)
-        soup = BeautifulSoup(response.text,'html.parser')
+        soup = BeautifulSoup(response.text, 'html.parser')
 
 
-        result = []
-        #result_header = soup.find_all(text=re.compile('Round'))
-        #print result_header
+        scores = soup.find_all(href=re.compile('ft_match_statistics'))
 
-        #team_header = soup.find_all(tr=re.compile('#f2f4f7'))
+        final_match_list = []
+
+        for score in scores:
+            match_score = score.string
+            final_match_list.append(match_score)
+
+        scraper.list_to_file(final_match_list, 'scores')
+
         allrows = soup.findAll('tr')
         userrows = [t for t in allrows if t.findAll(text=re.compile('v '))]
 
@@ -178,42 +116,46 @@ class Footywire_Scraper:
                 scraper.score_string(str(rowtxt), '>', '<')
             #rowlist.append(rowtxt)
 
+        firebasedb = Firebase('https://flickering-fire-9394.firebaseio.com/results/')
+        response = firebasedb.remove()
+        length = len(rowlist) - 3
+        newlist = rowlist[-length:]
+        count = 1
         idx = 0
-        count = 0
-        team_list = []
-        for row in rowlist:
-            if count < 27:
+        for row in newlist:
+            if count < 25:
                 if row == []:
+                    current_round = "Round" + str(count)
                     count += 1
-                    if count > 3:
-                        print "Round" + str(count-3)
+                    print current_round
                 else:
                     thteam = scraper.doit(str(row[0]))
                     thteam_two = scraper.doit(str(row[1]))
-                    match = scraper.clean_team(thteam) + " vs " + scraper.clean_team(thteam_two)
-                    print match
-                    team_list.append(match)
+                    thteam = scraper.clean_team(thteam)
+                    thteam_two = scraper.clean_team(thteam_two)
+                    match_score_one, match_score_two = scraper.format_match_score(final_match_list[idx])
+                    idx += 1
+                    fireb = Firebase('https://flickering-fire-9394.firebaseio.com/results/'+ current_round)
+                    resp = fireb.push({'team_one': thteam })
+                    print thteam
+                    resp = fireb.push({'score_one': match_score_one })
+                    print match_score_one
+                    resp = fireb.push({'team_two': thteam_two })
+                    print thteam_two
+                    resp = fireb.push({'score_two': match_score_two })
+                    print match_score_two
 
-
-
-
-        scraper.list_to_file(team_list, 'teams')
-
-        scores = soup.find_all(href=re.compile('ft_match_statistics'))
-
-        final_match_list = []
-
-        for score in scores:
-            match_score = score.string
-            #print match_score
-            final_match_list.append(match_score)
-
-        scraper.list_to_file(final_match_list, 'scores')
 
     def score_string(self, s_string, split_one, split_two):
+        "removes html chrs"
         score_one = s_string.split('>')
         score_two = score_one[1].split('<')
         return score_two[0]
+
+    def format_match_score(self, match_score):
+        "Takes match score of aa-bb and returns aa, bb"
+        match_score_split = match_score.split("-")
+        return match_score_split[0], match_score_split[1]
 
 
 scraper = Footywire_Scraper()
