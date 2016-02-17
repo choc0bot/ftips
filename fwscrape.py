@@ -27,27 +27,43 @@ def update_progress(progress, max_time, starting_time=start_time):
     sys.stdout.write( '\r[{0}{2}] {1}% ({3}) Elapsed:{4}min ETA:{5}min'.format('#'*(int_percent), int_percent,' '*(100-(int_percent)), progress, int(elapsed_min), eta_min))
     sys.stdout.flush()
 
+def clean_team(mylink):
+    """removes - from string"""
+    mylink = mylink[3:]
+    mylink = mylink.replace('-', ' ')
+    return mylink
+
+def doit(text):
+    """cleans up score_string string"""
+    matches = re.findall(r'\"(.+?)\"', text)
+    return ",".join(matches)
+
+def list_to_file(thelist, filename):
+    """outputs inputed list to a text file """
+    thefile = filename + ".txt"
+    print thefile
+    text_file = open(thefile, "w")
+    for item in thelist:
+        text_file.write("%s\n" % item)
+
+def parse_result(team_one, score_one, team_two, score_two):
+    score_o = int(score_one)
+    score_t = int(score_two)
+    if score_o > score_t:
+        result = team_one +" "+ score_one +" def " + team_two +" "+ score_two
+    elif score_t > score_o:
+        result = team_two +" "+ score_two + " def " + team_one +" "+ score_one
+    else:
+        result = team_one +" "+ score_one +" drew "+ team_two +" "+ score_two
+    return result
+
+
+
 
 class Footywire_Scraper:
     def __init__(self):
         self.headers = {"User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.116 Safari/537.36","Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", "Referer":"http://www.google.com.au","Cache-Control":"max-age=0"}
         self.baseURL = "http://www.footywire.com/afl/footy/"
-
-    def clean_team(self, mylink):
-        mylink = mylink[3:]
-        mylink = mylink.replace('-', ' ')
-        return mylink
-
-    def doit(self, text):
-        matches = re.findall(r'\"(.+?)\"', text)
-        return ",".join(matches)
-
-    def list_to_file(self, thelist, filename):
-        thefile = filename + ".txt"
-        print thefile
-        text_file = open(thefile, "w")
-        for item in thelist:
-            text_file.write("%s\n" % item)
 
     def get_ladder(self):
         """Parses footywire HTML to get ladder"""
@@ -93,7 +109,7 @@ class Footywire_Scraper:
             match_score = score.string
             final_match_list.append(match_score)
 
-        scraper.list_to_file(final_match_list, 'scores')
+        #list_to_file(final_match_list, 'scores')
 
         allrows = soup.findAll('tr')
         userrows = [t for t in allrows if t.findAll(text=re.compile('v '))]
@@ -129,13 +145,17 @@ class Footywire_Scraper:
                     count += 1
                     print current_round
                 else:
-                    thteam = scraper.doit(str(row[0]))
-                    thteam_two = scraper.doit(str(row[1]))
-                    thteam = scraper.clean_team(thteam)
-                    thteam_two = scraper.clean_team(thteam_two)
+                    thteam = doit(str(row[0]))
+                    thteam_two = doit(str(row[1]))
+                    #thteam = clean_team(thteam)
+                    #thteam_two = clean_team(thteam_two)
                     match_score_one, match_score_two = scraper.format_match_score(final_match_list[idx])
                     idx += 1
+                    result = parse_result(clean_team(thteam), match_score_one, clean_team(thteam_two), match_score_two)
                     fireb = Firebase('https://flickering-fire-9394.firebaseio.com/results/'+ current_round)
+                    #result = thteam + ' ' + match_score_one + ' def ' + thteam_two + ' ' + match_score_two
+                    resp = fireb.push({'match': result })
+                    """
                     resp = fireb.push({'team_one': thteam })
                     print thteam
                     resp = fireb.push({'score_one': match_score_one })
@@ -144,6 +164,7 @@ class Footywire_Scraper:
                     print thteam_two
                     resp = fireb.push({'score_two': match_score_two })
                     print match_score_two
+                    """
 
 
     def score_string(self, s_string, split_one, split_two):
