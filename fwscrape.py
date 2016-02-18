@@ -14,6 +14,27 @@ from firebase import Firebase
 
 start_time = time.mktime(time.gmtime())
 
+team_dict = {
+    'adelaide crows': 'adelaide',
+    'brisbane lions': 'brisbane',
+    'western bulldogs':'bulldogs',
+    'carlton blues': 'carlton',
+    'collingwood magpies': 'collingwood',
+    'essendon bombers': 'essendon',
+    'fremantle dockers': 'fremantle',
+    'gold coast suns': 'gc',
+    'geelong cats': 'geelong',
+    'greater western sydney giants': 'gws',
+    'hawthorn hawks': 'hawthorn',
+    'melbourne demons': 'melbourne',
+    'kangaroos': 'north',
+    'port adelaide power': 'port',
+    'richmond tigers': 'richmond',
+    'st kilda saints': 'stkilda',
+    'sydney swans': 'sydney',
+    'west coast eagles': 'wce',
+}
+
 def update_progress(progress, max_time, starting_time=start_time):
     """ Pretty prints a progress bar """
 
@@ -46,9 +67,16 @@ def list_to_file(thelist, filename):
     for item in thelist:
         text_file.write("%s\n" % item)
 
+def multipleReplace(text):
+    for key in team_dict:
+        text = text.replace(key, team_dict[key])
+    return text
+
 def parse_result(team_one, score_one, team_two, score_two):
     score_o = int(score_one)
     score_t = int(score_two)
+    team_one = multipleReplace(team_one)
+    team_two = multipleReplace(team_two)
     if score_o > score_t:
         result = team_one +" "+ score_one +" def " + team_two +" "+ score_two
     elif score_t > score_o:
@@ -89,6 +117,7 @@ class Footywire_Scraper:
             response = f.remove()
             print response
             for team in ladder:
+                team = multipleReplace(team)
                 print team
                 r = f.push({'team_id': team })
 
@@ -153,8 +182,8 @@ class Footywire_Scraper:
                     idx += 1
                     result = parse_result(clean_team(thteam), match_score_one, clean_team(thteam_two), match_score_two)
                     fireb = Firebase('https://flickering-fire-9394.firebaseio.com/results/'+ current_round)
-                    #result = thteam + ' ' + match_score_one + ' def ' + thteam_two + ' ' + match_score_two
                     resp = fireb.push({'match': result })
+                    #print result
                     """
                     resp = fireb.push({'team_one': thteam })
                     print thteam
@@ -180,5 +209,5 @@ class Footywire_Scraper:
 
 
 scraper = Footywire_Scraper()
-#ladder = scraper.get_ladder()
+ladder = scraper.get_ladder()
 results = scraper.get_results_ext()
