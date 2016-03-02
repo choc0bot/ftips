@@ -170,7 +170,7 @@ class Footywire_Scraper:
         for row in newlist:
             if count < 25:
                 if row == []:
-                    current_round = "Round" + str(count)
+                    current_round = "round" + str(count)
                     count += 1
                     print current_round
                 else:
